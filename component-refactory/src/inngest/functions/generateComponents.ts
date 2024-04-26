@@ -1,14 +1,14 @@
-import { client } from "@/inngest/client";
+import { inngest } from '@/inngest/client';
 
 import {
   fetchChatCompletion,
   InputFile,
   ComponentRecommendation,
-} from "./_utils";
+} from './_utils';
 
-import { updateProjectStatus, addRefactoring } from "@/db";
+import { updateProjectStatus, addRefactoring } from '@/db';
 
-async function updateExistingFile(
+export async function updateExistingFile(
   sourceFiles: InputFile[],
   recommendations: ComponentRecommendation[],
   recommendationsContent: {
@@ -24,24 +24,24 @@ async function updateExistingFile(
 
   const output = await fetchChatCompletion([
     {
-      role: "user",
+      role: 'user',
       content: JSON.stringify(sourceFiles),
     },
     {
-      role: "assistant",
+      role: 'assistant',
       content: JSON.stringify(recommendations),
     },
     {
-      role: "user",
+      role: 'user',
       content: `Using the new components, regenerate the source code for ${inputPath} using format { "content": <content> }. Here are the new components source:\n${JSON.stringify(
         recommendationsContent
       )}\n`,
     },
   ]);
 
-  const data = JSON.parse(output ?? "{}");
+  const data = JSON.parse(output ?? '{}');
   if (data.noop === true) {
-    console.log("No changes needed for", inputPath);
+    console.log('No changes needed for', inputPath);
     return null;
   }
 
@@ -51,28 +51,35 @@ async function updateExistingFile(
   };
 }
 
-export const generateComponents = client.createFunction(
-  { id: "generateComponents" },
-  { event: "system/generate-components" },
+export const generateComponent = inngest.createFunction(
+  {
+    id: 'generateComponent',
+    throttle: {
+      limit: 1,
+      period: '10s',
+    },
+  },
+  { event: 'analyzer/generate-component' },
   async ({ event, step }) => {
-    const { trackingId, sourceFiles, recommendations, recommendationsContent } =
-      event.data;
+    const {
+      trackingId,
+      sourceFiles,
+      recommendations,
+      recommendationsContent,
+      inputFile,
+    } = event.data;
 
-    await updateProjectStatus(trackingId, "Generating components", false);
+    const updatedFile = await step.run('update-existing-file', async () => {
+      return await updateExistingFile(
+        sourceFiles,
+        recommendations,
+        recommendationsContent,
+        inputFile
+      );
+    });
 
-    const updatedFiles = await Promise.all(
-      sourceFiles.map((inputFile: InputFile) =>
-        updateExistingFile(
-          sourceFiles,
-          recommendations,
-          recommendationsContent,
-          inputFile
-        )
-      )
-    );
-
-    for (const updatedFile of updatedFiles) {
-      if (updatedFile) {
+    if (updatedFile) {
+      await step.run('add-refactoring', async () => {
         const { inputPath, content: oldContent } = updatedFile.inputFile;
         await addRefactoring(
           trackingId,
@@ -80,17 +87,9 @@ export const generateComponents = client.createFunction(
           oldContent,
           updatedFile.content
         );
-      }
+      });
     }
 
-    await updateProjectStatus(trackingId, "Completed", true);
-
-    return {
-      event,
-      body: {
-        trackingId,
-        updatedFiles: updatedFiles.filter(Boolean),
-      },
-    };
+    return updatedFile;
   }
 );

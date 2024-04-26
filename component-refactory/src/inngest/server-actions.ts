@@ -1,7 +1,7 @@
-"use server";
-import { client } from "./client";
+'use server';
+import { inngest } from './client';
 
-import { addProject, updateProjectStatus } from "@/db";
+import { addProject, updateProjectStatus } from '@/db';
 
 export async function onParseProject({
   user,
@@ -15,10 +15,10 @@ export async function onParseProject({
   const id = Math.random().toString(36).substring(7);
 
   await addProject(id, user, repo, appRoot);
-  await updateProjectStatus(id, "Starting processing", false);
+  await updateProjectStatus(id, 'Starting processing', false);
 
-  await client.send({
-    name: "system/parse-project",
+  await inngest.send({
+    name: 'analyzer/get-project-recommendations',
     data: {
       trackingId: id,
       user,
