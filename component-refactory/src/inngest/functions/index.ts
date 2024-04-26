@@ -1,4 +1,3 @@
-export { parseProject } from "./parseProject";
-export { getRecommendations } from "./getRecommendations";
-export { getComponentRecommendations } from "./getRecommendationContent";
-export { generateComponents } from "./generateComponents";
+export { getProjectRecommendations } from './getProjectRecommendations';
+export { getComponentRecommendationContent } from './getRecommendationContent';
+export { generateComponent } from './generateComponents';
