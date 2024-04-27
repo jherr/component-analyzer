@@ -1,3 +1,3 @@
-import { Inngest } from "inngest";
+import { Inngest } from 'inngest';
 
-export const client = new Inngest({ id: "my-app" });
+export const inngest = new Inngest({ id: 'component-analyzer' });

@@ -1,18 +1,16 @@
-import { serve } from "inngest/next";
-import { client } from "@/inngest/client";
+import { serve } from 'inngest/next';
+import { inngest } from '@/inngest/client';
 import {
-  parseProject,
-  getRecommendations,
-  getComponentRecommendations,
-  generateComponents,
-} from "@/inngest/functions";
+  getProjectRecommendations,
+  getComponentRecommendationContent,
+  generateComponent,
+} from '@/inngest/functions';
 
 export const { GET, POST, PUT } = serve({
-  client: client,
+  client: inngest,
   functions: [
-    parseProject,
-    getRecommendations,
-    getComponentRecommendations,
-    generateComponents,
+    getProjectRecommendations,
+    getComponentRecommendationContent,
+    generateComponent,
   ],
 });
